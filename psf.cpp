@@ -437,6 +437,55 @@ int snsf_loader(void * context, const uint8_t * exe, size_t exe_size,
         state->data = iptr;
         state->data_size = isize;
     }
+
+    // reserved section
+    if (reserved_size >= 8)
+    {
+        unsigned rsvtype = get_le32(reserved + 0);
+        unsigned rsvsize = get_le32(reserved + 4);
+
+        if (rsvtype == 0)
+        {
+            // SRAM block
+            if (reserved_size < 12 || rsvsize < 4)
+            {
+                DBG("Reserve section (SRAM) is too short");
+                return -1;
+            }
+
+            // check offset and size
+            unsigned sram_offset = get_le32(reserved + 8);
+            unsigned sram_patch_size = rsvsize - 4;
+            if (sram_offset + sram_patch_size > 0x20000)
+            {
+                DBG("SRAM size error");
+                return -1;
+            }
+
+            if (!state->sram)
+            {
+                state->sram = (unsigned char *) malloc(0x20000);
+                if (!state->sram)
+                    return -1;
+                memset(state->sram, 0, 0x20000);
+            }
+
+            // load SRAM data
+            memcpy(state->sram + sram_offset, reserved + 12, sram_patch_size);
+
+            // update SRAM size
+            if (state->sram_size < sram_offset + sram_patch_size)
+            {
+                state->sram_size = sram_offset + sram_patch_size;
+            }
+        }
+        else
+        {
+            DBG("Unsupported reserve section type");
+            return -1;
+        }
+    }
+
     return 0;
 }
 
