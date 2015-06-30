@@ -377,7 +377,7 @@ int snsf_loader(void * context, const uint8_t * exe, size_t exe_size,
     unsigned char *xptr;
     unsigned xofs = get_le32(exe + 0);
     unsigned xsize = get_le32(exe + 4);
-    if ( xsize < exe_size - 8 ) return -1;
+    if ( xsize > exe_size - 8 ) return -1;
     if (!state->base_set)
     {
         state->base = xofs;
