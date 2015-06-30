@@ -3,6 +3,10 @@
 /*
 	changelog
 
+2015-06-30 12:50 UTC - loveemu
+- Added channel mute capability
+- Added limited SA-1 support (I-RAM access, no coprocessor)
+
 2015-06-28 08:50 UTC - loveemu
 - Copied from foo_input_gsf code base
 
@@ -77,6 +81,8 @@ static cfg_int cfg_suppressopeningsilence(guid_cfg_suppressopeningsilence,defaul
 static cfg_int cfg_suppressendsilence(guid_cfg_suppressendsilence,default_cfg_suppressendsilence);
 static cfg_int cfg_endsilenceseconds(guid_cfg_endsilenceseconds,default_cfg_endsilenceseconds);
 static cfg_window_placement cfg_placement(guid_cfg_placement);
+
+static int cfg_mutedchannels = 0;
 
 static const char field_length[]="snsf_length";
 static const char field_fade[]="snsf_fade";
@@ -726,6 +732,7 @@ public:
 				unsigned skip_howmany = skip_max - silence;
 				unsigned unskippable = 0;
 				m_output.bytes_in_buffer = 0;
+				m_system->soundEnableFlag = (uint8_t)cfg_mutedchannels ^ 0xff;
 				m_system->CPULoop();
 				if ( skip_howmany > m_output.bytes_in_buffer / 4 )
 					skip_howmany = m_output.bytes_in_buffer / 4;
@@ -803,6 +810,7 @@ public:
 					{
 						samples_to_render = free_space;
 						m_output.bytes_in_buffer = 0;
+						m_system->soundEnableFlag = (uint8_t)cfg_mutedchannels ^ 0xff;
 						m_system->CPULoop();
 						samples_to_render = m_output.bytes_in_buffer / 4;
 						if ( samples_to_render > free_space )
@@ -842,6 +850,7 @@ public:
 			else
 			{
 				m_output.bytes_in_buffer = 0;
+				m_system->soundEnableFlag = (uint8_t)cfg_mutedchannels ^ 0xff;
 				m_system->CPULoop();
 				written = m_output.bytes_in_buffer / 4;
 			}
@@ -906,6 +915,7 @@ public:
 			p_abort.check();
 
 			m_output.bytes_in_buffer = 0;
+			m_system->soundEnableFlag = (uint8_t)cfg_mutedchannels ^ 0xff;
 			m_system->CPULoop();
 			unsigned samples = m_output.bytes_in_buffer / 4;
 			if ( samples > howmany )
@@ -1125,11 +1135,13 @@ public:
 		COMMAND_HANDLER_EX(IDC_SILENCE, EN_CHANGE, OnEditChange)
 		COMMAND_HANDLER_EX(IDC_DLENGTH, EN_CHANGE, OnEditChange)
 		COMMAND_HANDLER_EX(IDC_DFADE, EN_CHANGE, OnEditChange)
+		COMMAND_HANDLER_EX(IDC_MUTED_CHANNELS, LBN_SELCHANGE, OnListSelChange)
 	END_MSG_MAP()
 private:
 	BOOL OnInitDialog(CWindow, LPARAM);
 	void OnEditChange(UINT, int, CWindow);
 	void OnButtonClick(UINT, int, CWindow);
+	void OnListSelChange(UINT, int, CWindow);
 	bool HasChanged();
 	void OnChanged();
 
@@ -1180,6 +1192,15 @@ BOOL CMyPreferences::OnInitDialog(CWindow, LPARAM) {
 		}
 	}
 	
+	SendDlgItemMessage(IDC_MUTED_CHANNELS, LB_ADDSTRING, 0, (LPARAM)L"BRRPCM 1");
+	SendDlgItemMessage(IDC_MUTED_CHANNELS, LB_ADDSTRING, 0, (LPARAM)L"BRRPCM 2");
+	SendDlgItemMessage(IDC_MUTED_CHANNELS, LB_ADDSTRING, 0, (LPARAM)L"BRRPCM 3");
+	SendDlgItemMessage(IDC_MUTED_CHANNELS, LB_ADDSTRING, 0, (LPARAM)L"BRRPCM 4");
+	SendDlgItemMessage(IDC_MUTED_CHANNELS, LB_ADDSTRING, 0, (LPARAM)L"BRRPCM 5");
+	SendDlgItemMessage(IDC_MUTED_CHANNELS, LB_ADDSTRING, 0, (LPARAM)L"BRRPCM 6");
+	SendDlgItemMessage(IDC_MUTED_CHANNELS, LB_ADDSTRING, 0, (LPARAM)L"BRRPCM 7");
+	SendDlgItemMessage(IDC_MUTED_CHANNELS, LB_ADDSTRING, 0, (LPARAM)L"BRRPCM 8");
+	
 	return FALSE;
 }
 
@@ -1189,6 +1210,29 @@ void CMyPreferences::OnEditChange(UINT, int, CWindow) {
 
 void CMyPreferences::OnButtonClick(UINT, int, CWindow) {
 	OnChanged();
+}
+
+void CMyPreferences::OnListSelChange(UINT, int id, CWindow wnd) {
+	switch (id)
+	{
+	case IDC_MUTED_CHANNELS:
+		{
+			unsigned long muted_channels = 0;
+
+			int cnt = (int)(INT_PTR)SendDlgItemMessage(IDC_MUTED_CHANNELS, LB_GETCOUNT);
+			for (int ch = 0; ch < cnt; ch++)
+			{
+				bool mute = (INT_PTR)SendDlgItemMessage(IDC_MUTED_CHANNELS, LB_GETSEL, ch) > 0;
+				if (mute)
+				{
+					muted_channels |= 1 << ch;
+				}
+			}
+
+			cfg_mutedchannels = muted_channels;
+		}
+		break;
+	}
 }
 
 t_uint32 CMyPreferences::get_state() {
@@ -1207,7 +1251,7 @@ void CMyPreferences::reset() {
 	uSetDlgItemText( m_hWnd, IDC_DLENGTH, (char *)&temp );
 	print_time_crap( default_cfg_deffade, (char *)&temp );
 	uSetDlgItemText( m_hWnd, IDC_DFADE, (char *)&temp );
-	
+
 	OnChanged();
 }
 
@@ -1304,7 +1348,7 @@ static BOOL CALLBACK TimeProc(HWND wnd,UINT msg,WPARAM wp,LPARAM lp)
 		cfg_placement.on_window_creation(wnd);
 		return 1;
 	case WM_COMMAND:
-		switch(wp)
+		switch(LOWORD(wp))
 		{
 		case IDOK:
 			{
