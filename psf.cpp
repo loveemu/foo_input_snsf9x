@@ -667,7 +667,7 @@ public:
 		}
 
 		m_info.set_length( (double)( tag_song_ms + tag_fade_ms ) * .001 );
-		m_info.info_set_int( "samplerate", 44100 );
+		m_info.info_set_int( "samplerate", 32000 );
 		m_info.info_set_int( "channels", 2 );
 
 		m_file = p_file;
@@ -697,7 +697,7 @@ public:
 
 		m_system->Load( m_rom.data, m_rom.data_size, m_rom.sram, m_rom.sram_size );
 
-		m_system->soundSampleRate = 44100;
+		m_system->soundSampleRate = 32000;
 
 		m_system->SoundInit( &m_output );
 		m_system->SoundReset();
@@ -721,7 +721,7 @@ public:
 
 		do_suppressendsilence = !! cfg_suppressendsilence;
 
-		unsigned skip_max = cfg_endsilenceseconds * 44100;
+		unsigned skip_max = cfg_endsilenceseconds * 32000;
 
 		if ( cfg_suppressopeningsilence ) // ohcrap
 		{
@@ -772,7 +772,7 @@ public:
 
 		if ( ( eof || err < 0 ) && !silence_test_buffer.data_available() ) return false;
 
-		if ( no_loop && tag_song_ms && ( pos_delta + MulDiv( data_written, 1000, 44100 ) ) >= tag_song_ms + tag_fade_ms )
+		if ( no_loop && tag_song_ms && ( pos_delta + MulDiv( data_written, 1000, 32000 ) ) >= tag_song_ms + tag_fade_ms )
 			return false;
 
 		UINT written = 0;
@@ -858,7 +858,7 @@ public:
 			ptr = (short *) m_output.sample_buffer.get_ptr();
 		}
 
-		snsfemu_pos += double(written) / 44100.;
+		snsfemu_pos += double(written) / 32000.;
 
 		int d_start, d_end;
 		d_start = data_written;
@@ -888,7 +888,7 @@ public:
 			}
 		}
 
-		p_chunk.set_data_fixedpoint( ptr, written * 4, 44100, 2, 16, audio_chunk::channel_config_stereo );
+		p_chunk.set_data_fixedpoint( ptr, written * 4, 32000, 2, 16, audio_chunk::channel_config_stereo );
 
 		return true;
 	}
@@ -897,7 +897,7 @@ public:
 	{
 		eof = false;
 
-		double buffered_time = (double)(silence_test_buffer.data_available() / 2) / 44100.0;
+		double buffered_time = (double)(silence_test_buffer.data_available() / 2) / 32000.0;
 
 		snsfemu_pos += buffered_time;
 
@@ -907,7 +907,7 @@ public:
 		{
 			decode_initialize( no_loop ? input_flag_no_looping : 0, p_abort );
 		}
-		unsigned int howmany = ( int )( audio_math::time_to_samples( p_seconds - snsfemu_pos, 44100 ) );
+		unsigned int howmany = ( int )( audio_math::time_to_samples( p_seconds - snsfemu_pos, 32000 ) );
 
 		// more abortable, and emu doesn't like doing huge numbers of samples per call anyway
 		while ( howmany )
@@ -1105,8 +1105,8 @@ public:
 private:
 	void calcfade()
 	{
-		song_len=MulDiv(tag_song_ms-pos_delta,44100,1000);
-		fade_len=MulDiv(tag_fade_ms,44100,1000);
+		song_len=MulDiv(tag_song_ms-pos_delta,32000,1000);
+		fade_len=MulDiv(tag_fade_ms,32000,1000);
 	}
 };
 
