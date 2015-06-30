@@ -770,7 +770,8 @@ public:
 
 		do_suppressendsilence = !! cfg_suppressendsilence;
 
-		unsigned skip_max = cfg_endsilenceseconds * 32000;
+		// Lord of the Rings SNSF takes 6+ seconds of silence at the beginning
+		unsigned skip_max = std::max<unsigned>(cfg_endsilenceseconds, 7) * 32000;
 
 		if ( cfg_suppressopeningsilence ) // ohcrap
 		{
