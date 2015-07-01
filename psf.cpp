@@ -905,7 +905,9 @@ public:
 				written = m_output.bytes_in_buffer / 4;
 			}
 
-			ptr = (short *) m_output.sample_buffer.get_ptr();
+			sample_buffer.grow_size( written * 2 );
+			memcpy( sample_buffer.get_ptr(), m_output.sample_buffer.get_ptr(), written * 4 );
+			ptr = (short *) sample_buffer.get_ptr();
 		}
 
 		snsfemu_pos += double(written) / 32000.;
